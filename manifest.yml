@@ -1,0 +1,19 @@
+modules:
+  jira:issuePanel:
+    - key: security-checklists-issue-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: Security Checklist
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+app:
+  runtime:
+    name: nodejs18.x
+  id: ari:cloud:ecosystem::app/a71484cf-f612-40d1-b9a2-34ee24ff54d6
