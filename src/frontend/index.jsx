@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon } from '@forge/react';
+import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext } from '@forge/react';
 import { invoke } from '@forge/bridge';
-import uuid from 'uuid-random';
 
 const App = () => {
+  const context = useProductContext();
   const [lists, setLists] = useState([]);
   const [listInUse, setlistInUse] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
 
   useEffect(() => {
-    async function asyncListSetter() {
+    if (!context || !context.extension) return;
+
+    const fetchData = async () => {
       const availableLists = await invoke('getLists');
       setLists(availableLists);
-      return availableLists;
-    }
 
-    async function asyncSelectedSetter(availableLists) {
-      const activeList = await invoke('getActiveList');
+      let activeList = await invoke('getActiveList', { issueId: context.extension.issue.id });
       if (activeList) {
-        setlistInUse(activeList.items);
+        console.log(activeList)
+        setlistInUse(activeList);
       } else {
         const defaultList = availableLists.find(l => l.default === true);
         const toSetSelected = defaultList
@@ -27,23 +27,24 @@ const App = () => {
         if (toSetSelected.items && !toSetSelected.items[0].id) {
           toSetSelected.items = toSetSelected.items.map(item => ({
             ...item,
-            id: uuid(),
           }));
         }
         setlistInUse(toSetSelected.items);
       }
-    }
+    };
 
-    asyncListSetter().then(asyncSelectedSetter);
-  }, []);
+    fetchData();
+  }, [context]);
 
   useEffect(() => {
-    console.log('---listInUse updated----');
-    console.log(listInUse);
+    if (!context) {
+      return
+    }
+    invoke('updateList', { issueId: context.extension.issue.id, list: listInUse });
   }, [listInUse]);
 
   function selectTemplateAction(e) {
-    const selectedTemplate = e.target.value;
+    const selectedTemplate = e.key;
     setSelectedTemplate(selectedTemplate);
 
     const selectedList = lists.find(list => list.name === selectedTemplate);
@@ -56,17 +57,12 @@ const App = () => {
     const action = selectedOption.key;
     const updatedList = [...listInUse];
     updatedList[index].action = action;
-
     setlistInUse(updatedList);
-    await invoke('updateItem', { itemId: updatedList[index].id, action });
   }
 
   async function handleDelete(index) {
-    const itemId = listInUse[index].id;
     const updatedList = listInUse.filter((_, i) => i !== index);
-
     setlistInUse(updatedList);
-    await invoke('deleteItem', { itemId });
   }
 
   async function handleRankEnd({ sourceIndex, destination }) {
@@ -74,10 +70,19 @@ const App = () => {
       const updatedList = [...listInUse];
       const [movedItem] = updatedList.splice(sourceIndex, 1);
       updatedList.splice(destination.index, 0, movedItem);
-
       setlistInUse(updatedList);
-      await invoke('updateListOrder', { newList: updatedList.map(item => item.id) });
     }
+  }
+
+  async function handleGenerateClick(e) {
+    console.log(context)
+    const generatedList = await invoke('getGeneratedList', {issueKey: context.extension.issue.key})
+    if (!Array.isArray(generatedList)){
+      console.error('The generated list was not an array', generatedList)
+      return
+    }
+    // const generatedList = [{label: 'Random'}, {label: 'Other random'}]
+    setlistInUse(generatedList)
   }
 
   const actionOptions = [
@@ -86,7 +91,7 @@ const App = () => {
     { label: 'N/A', key: 'not-applicable' }
   ];
 
-  const tableRows = listInUse.map((item, index) => ({
+  const tableRows = context && listInUse ? listInUse.map((item, index) => ({
     key: item.label,
     cells: [
       { content: item.label },
@@ -106,7 +111,7 @@ const App = () => {
         content: <Button appearance='subtle' iconBefore="cross-circle" onClick={() => handleDelete(index)} />,
       },
     ],
-  }));
+  })) : [];
 
   const tableColumns = {
     cells: [
@@ -129,23 +134,21 @@ const App = () => {
 
   return (
     <>
-      {listInUse.length < 1 && (
-        <Inline alignBlock="stretch" alignInline="center">
-          <Label labelFor="select-template-list">Select template:</Label>
-          <Select
-            id="select-template-list"
-            name="Select template list"
-            appearance="subtle"
-            options={(lists.map(list => ({
-              label: list.name,
-              key: list.name,
-            })) || [])}
-            onChange={selectTemplateAction}
-          />
-          <Text><Strong>OR</Strong></Text>
-          <Button appearance="primary">Generate List (AI)</Button>
-        </Inline>
-      )}
+      <Inline alignBlock="stretch" alignInline="center">
+        <Label labelFor="select-template-list">Select template:</Label>
+        <Select
+          id="select-template-list"
+          name="Select template list"
+          appearance="subtle"
+          options={(lists.map(list => ({
+            label: list.name,
+            key: list.name,
+          })) || [])}
+          onChange={selectTemplateAction}
+        />
+        <Text><Strong>OR</Strong></Text>
+        <Button appearance="primary" onClick={handleGenerateClick}>Generate List (AI)</Button>
+      </Inline>
 
       <DynamicTable
         head={tableColumns}
