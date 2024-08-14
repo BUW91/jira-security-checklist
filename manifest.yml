@@ -21,3 +21,7 @@ permissions:
   scopes:
     - storage:app
     - read:jira-work
+  external:
+    fetch:
+      backend:
+        - 'https://jira-security-checklist-ai-connector.vercel.app'

@@ -1,6 +1,6 @@
 import Resolver from '@forge/resolver';
 import owaspList from '../default-lists/owasp';
-import api, { route, storage } from '@forge/api';
+import api, { route, storage, fetch } from '@forge/api';
 
 
 const resolver = new Resolver();
@@ -15,10 +15,10 @@ resolver.define('getActiveList', async (req) => {
     return false;
   }
   const list = await storage.get(issueId)
-  if (Array.isArray(list)){
+  if (Array.isArray(list)) {
     return list
   }
-  else{
+  else {
     return false
   }
 });
@@ -34,7 +34,30 @@ resolver.define('getGeneratedList', async (req) => {
   const issueData = await res.json();
   const summary = issueData.fields.summary
   const description = issueData.fields.description
-  return [{ label: '', issueData }]
+
+  try {
+    const response = await fetch('https://jira-security-checklist-ai-connector.vercel.app/generate-security-checklist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summary: summary,
+        description: description
+      })
+    })
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        return data
+      } else {
+        return { success: false, body: data }
+      }
+    } else {
+      return { success: false, status: response.status, statusText: response.statusText }
+    }
+  }
+  catch (e) {
+    return { success: false, error: e }
+  }
 })
 
 export const handler = resolver.getDefinitions();
