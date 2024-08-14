@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext } from '@forge/react';
+import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton } from '@forge/react';
 import { invoke } from '@forge/bridge';
 
 const App = () => {
@@ -7,6 +7,7 @@ const App = () => {
   const [lists, setLists] = useState([]);
   const [listInUse, setlistInUse] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [aiLoading, setAiLoading] = useState(false)
 
   useEffect(() => {
     if (!context || !context.extension) return;
@@ -76,12 +77,13 @@ const App = () => {
 
   async function handleGenerateClick(e) {
     console.log(context)
+    setAiLoading(true)
     const generatedList = await invoke('getGeneratedList', {issueKey: context.extension.issue.key})
+    setAiLoading(false)
     if (!Array.isArray(generatedList)){
       console.error('The generated list was not an array', generatedList)
       return
     }
-    // const generatedList = [{label: 'Random'}, {label: 'Other random'}]
     setlistInUse(generatedList)
   }
 
@@ -147,7 +149,7 @@ const App = () => {
           onChange={selectTemplateAction}
         />
         <Text><Strong>OR</Strong></Text>
-        <Button appearance="primary" onClick={handleGenerateClick}>Generate List (AI)</Button>
+        <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate List (AI)</LoadingButton>
       </Inline>
 
       <DynamicTable
