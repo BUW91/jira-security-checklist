@@ -1,18 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Box, Heading, DynamicTable, Button, Toggle, Label, Textfield, Inline } from '@forge/react';
+import ForgeReconciler, {
+  Box, 
+  Heading, 
+  DynamicTable, 
+  Button, 
+  Toggle, 
+  Label, 
+  Textfield, 
+  Inline, 
+  Modal,
+  ModalBody,
+  ModalTransition,
+  ModalTitle,
+  ModalFooter,
+  ModalHeader,
+  Form,
+  useForm,
+  Stack
+} from '@forge/react';
 import { invoke } from '@forge/bridge';
+import { CreateNewTemplateModal } from './components/CreateNewTemplate';
+
 
 const App = () => {
   const [templateLists, setTemplateLists] = useState([]);
   const [editingItem, setEditingItem] = useState({ listId: null, itemIndex: null });
   const [editValue, setEditValue] = useState('');
-  const [newItemListId, setNewItemListId] = useState(null); // Track the list ID where a new item was added
+  const [newItemListId, setNewItemListId] = useState(null);
 
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
         const result = await invoke('getTemplateLists');
-        console.log(result);
         setTemplateLists(result);
       } catch (error) {
         console.error('Error fetching templates:', error);
@@ -48,6 +67,9 @@ const App = () => {
   };
 
   const formatRows = (list) => {
+    if (!list.items){
+      return
+    }
     const rows = list.items.map((item, index) => ({
       key: 'item' + index,
       cells: [
@@ -150,6 +172,19 @@ const App = () => {
     setNewItemListId(listId); // Track the list ID for the new item
   };
 
+  const handleAddTemplate = (template) => {
+    if (!template.name || !template.items || !Array.isArray(template.items)) {
+      return { success: false };
+    }
+  
+    invoke('createTemplateList', template).then((newTemplate) => {
+      setTemplateLists(prevTemplateLists => [...prevTemplateLists, newTemplate]);
+    }).catch(error => {
+      console.error('Error creating template:', error);
+    });
+  };
+  
+
   const handleDeleteItem = (list, index) => {
     setTemplateLists(prevTemplateLists => {
       const listIndex = prevTemplateLists.findIndex(l => l.id === list.id);
@@ -202,9 +237,6 @@ const App = () => {
   };
 
   const handleRankEnd = (startIndex, endIndex, listId) => {
-    console.log(`START INDEX: ${startIndex}`)
-    console.log(`END INDEX: ${endIndex}`)
-
     if (startIndex === endIndex) {
       return;
     }
@@ -230,45 +262,50 @@ const App = () => {
   };
 
   return (
-    <Box>
-      {templateLists.map((list, index) => (
-        <Box key={index}>
-          <Inline spread='space-between'>
-            <Inline alignBlock='center'>
-              <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
-              {list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
+    <Stack>
+      <Box>
+        {templateLists.map((list, index) => (
+          <Box key={index}>
+            <Inline spread='space-between'>
+              <Inline alignBlock='center'>
+                <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
+                {list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
+              </Inline>
+              <Inline alignBlock='center'>
+                <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
+                <Toggle
+                  id={`list-toggle-enabled-${index}`}
+                  isChecked={list.isEnabled ? true : false}
+                  onChange={() => handleEnabledToggle(list)}
+                />
+                <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
+              </Inline>
             </Inline>
-            <Inline alignBlock='center'>
-              <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
-              <Toggle
-                id={`list-toggle-enabled-${index}`}
-                isChecked={list.isEnabled ? true : false}
-                onChange={() => handleEnabledToggle(list)}
-              />
-              <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
+            <DynamicTable
+              head={columns}
+              rows={formatRows(list)}
+              isRankable
+              onRankEnd={({ sourceIndex, destination }) => handleRankEnd(sourceIndex, destination.index, list.id)}
+            ></DynamicTable>
+            <Inline
+              alignBlock='center'
+              alignInline='center'
+            >
+              <Button
+                appearance='subtle'
+                iconBefore="add"
+                onClick={() => {
+                  handleAddItem(list.id);
+                }}
+              >Add new item</Button>
             </Inline>
-          </Inline>
-          <DynamicTable
-            head={columns}
-            rows={formatRows(list)}
-            isRankable
-            onRankEnd={({ sourceIndex, destination }) => handleRankEnd(sourceIndex, destination.index, list.id)}
-          ></DynamicTable>
-          <Inline
-            alignBlock='center'
-            alignInline='center'
-          >
-            <Button
-              appearance='subtle'
-              iconBefore="add"
-              onClick={() => {
-                handleAddItem(list.id);
-              }}
-            >Add new item</Button>
-          </Inline>
-        </Box>
-      ))}
-    </Box>
+          </Box>
+        ))}
+      </Box>
+      <Inline alignInline='center'>
+      <CreateNewTemplateModal handleAddTemplate={handleAddTemplate}/>
+      </Inline>
+    </Stack>
   );
 };
 

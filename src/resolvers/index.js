@@ -30,6 +30,18 @@ resolver.define('getTemplateLists', async () => {
 
 });
 
+resolver.define('createTemplateList', async (req) => {
+  const template = req.payload
+  if (!template.name || !template.items || !Array.isArray(template.items)){
+    return {success: false}
+  }
+  template.id = uuid()
+  template.isDefault = template.isDefault ? template.isDefault : false
+  template.isEnabled = template.hasOwnProperty('isEnabled') ? template.isEnabled : true
+  storage.set(getTemplateRef(template.id), template)
+  return {...template}
+})
+
 resolver.define('updateTemplateList', async (req) => {
   const { templateList } = req.payload
   await storage.set(getTemplateRef(templateList.id), templateList)
@@ -55,12 +67,11 @@ resolver.define('deleteTemplateList', async (req) => {
   const { id } = req.payload
   try {
     const res = await storage.delete(getTemplateRef(id))
-    return { success: true, message: res}
+    return { success: true, message: res }
   }
-  catch(e){
-    return {success: false, message: `error while deleting ${templateId}`, error: e}
+  catch (e) {
+    return { success: false, message: `error while deleting ${templateId}`, error: e }
   }
-
 })
 
 resolver.define('getActiveList', async (req) => {

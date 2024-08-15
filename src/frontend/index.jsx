@@ -17,7 +17,6 @@ const App = () => {
 
       let activeList = await invoke('getActiveList', { issueId: context.extension.issue.id });
       if (activeList) {
-        console.log(activeList)
         setlistInUse(activeList);
       } else {
         const defaultList = availableLists.find(l => l.default === true);
@@ -74,7 +73,6 @@ const App = () => {
   }
 
   async function handleGenerateClick(e) {
-    console.log(context)
     setAiLoading(true)
     const generatedList = await invoke('getGeneratedList', {issueKey: context.extension.issue.key})
     setAiLoading(false)
