@@ -233,15 +233,21 @@ const App = () => {
     <Box>
       {templateLists.map((list, index) => (
         <Box key={index}>
-          <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''} </Heading>
-          <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button>
-          <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
-          <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
-          <Toggle
-            id={`list-toggle-enabled-${index}`}
-            isChecked={list.isEnabled ? true : false}
-            onChange={() => handleEnabledToggle(list)}
-          />
+          <Inline spread='space-between'>
+            <Inline alignBlock='center'>
+              <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
+              {list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
+            </Inline>
+            <Inline alignBlock='center'>
+              <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
+              <Toggle
+                id={`list-toggle-enabled-${index}`}
+                isChecked={list.isEnabled ? true : false}
+                onChange={() => handleEnabledToggle(list)}
+              />
+              <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
+            </Inline>
+          </Inline>
           <DynamicTable
             head={columns}
             rows={formatRows(list)}
