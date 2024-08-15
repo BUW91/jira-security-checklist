@@ -6,14 +6,13 @@ const App = () => {
   const context = useProductContext();
   const [lists, setLists] = useState([]);
   const [listInUse, setlistInUse] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [aiLoading, setAiLoading] = useState(false)
 
   useEffect(() => {
     if (!context || !context.extension) return;
 
     const fetchData = async () => {
-      const availableLists = await invoke('getLists');
+      const availableLists = await invoke('getTemplateLists');
       setLists(availableLists);
 
       let activeList = await invoke('getActiveList', { issueId: context.extension.issue.id });
@@ -46,7 +45,6 @@ const App = () => {
 
   function selectTemplateAction(e) {
     const selectedTemplate = e.key;
-    setSelectedTemplate(selectedTemplate);
 
     const selectedList = lists.find(list => list.name === selectedTemplate);
     if (selectedList) {

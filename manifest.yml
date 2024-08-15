@@ -7,12 +7,21 @@ modules:
       render: native
       title: Security Checklist
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  jira:globalPage:
+    - key: checklist-templates
+      resource: templates
+      resolver:
+        function: resolver
+      render: native
+      title: Security Checklist Templates
   function:
     - key: resolver
       handler: index.handler
 resources:
   - key: main
     path: src/frontend/index.jsx
+  - key: templates
+    path: src/frontend/templates.jsx
 app:
   runtime:
     name: nodejs18.x
@@ -24,4 +33,4 @@ permissions:
   external:
     fetch:
       backend:
-        - 'https://jira-security-checklist-ai-connector.vercel.app'
+        - 'https://sc.api.solidini.com'
