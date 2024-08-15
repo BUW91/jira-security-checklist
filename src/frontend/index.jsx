@@ -74,9 +74,9 @@ const App = () => {
 
   async function handleGenerateClick(e) {
     setAiLoading(true)
-    const generatedList = await invoke('getGeneratedList', {issueKey: context.extension.issue.key})
+    const generatedList = await invoke('getGeneratedList', { issueKey: context.extension.issue.key })
     setAiLoading(false)
-    if (!Array.isArray(generatedList)){
+    if (!Array.isArray(generatedList)) {
       console.error('The generated list was not an array', generatedList)
       return
     }
@@ -122,17 +122,20 @@ const App = () => {
         key: 'action',
         content: 'Action',
         isSortable: true,
+        width: 15
       },
       {
         key: 'delete',
         content: 'Delete',
+        width: 10
       },
     ],
   };
 
   return (
     <>
-      <Inline alignBlock="stretch" alignInline="center">
+      <Inline spread='space-between'>
+      <Inline alignBlock='center'>
         <Label labelFor="select-template-list">Select template:</Label>
         <Select
           id="select-template-list"
@@ -144,8 +147,10 @@ const App = () => {
           })) || [])}
           onChange={selectTemplateAction}
         />
-        <Text><Strong>OR</Strong></Text>
+        </Inline>
+        <Inline alignBlock='center'>
         <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate List (AI)</LoadingButton>
+        </Inline>
       </Inline>
 
       <DynamicTable
