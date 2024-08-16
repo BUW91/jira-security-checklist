@@ -8,14 +8,6 @@ import ForgeReconciler, {
   Label, 
   Textfield, 
   Inline, 
-  Modal,
-  ModalBody,
-  ModalTransition,
-  ModalTitle,
-  ModalFooter,
-  ModalHeader,
-  Form,
-  useForm,
   Stack
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
