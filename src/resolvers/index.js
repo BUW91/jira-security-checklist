@@ -1,5 +1,5 @@
 import Resolver from '@forge/resolver';
-import owaspList from '../default-lists/owasp';
+import owasp2021 from '../default-lists/owasp2021';
 import api, { route, storage, fetch, startsWith } from '@forge/api';
 import uuid from 'uuid-random';
 
@@ -14,11 +14,11 @@ resolver.define('getTemplateLists', async () => {
   const result = await storage.query().where('key', startsWith('list-')).getMany()
   const templateKeyValues = result.results
   if (templateKeyValues.length < 1) {
-    owaspList.id = uuid()
-    owaspList.isDefault = true
-    owaspList.isEnabled = true
-    storage.set(getTemplateRef(owaspList.id), owaspList)
-    return [owaspList]
+    owasp2021.id = uuid()
+    owasp2021.isDefault = true
+    owasp2021.isEnabled = true
+    storage.set(getTemplateRef(owasp2021.id), owasp2021)
+    return [owasp2021]
   }
   else {
     let resultsToReturn = []
