@@ -8,7 +8,8 @@ import ForgeReconciler, {
   Label,
   Textfield,
   Inline,
-  Stack
+  Stack,
+  Text
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 import { CreateNewTemplateModal } from './components/CreateNewTemplate';
@@ -319,7 +320,11 @@ const App = () => {
         ))}
       </Box>
       <Inline alignInline='center'>
-        <CreateNewTemplateModal handleAddTemplate={handleAddTemplate} />
+        {templateLists.length < 20 ? (
+          <CreateNewTemplateModal handleAddTemplate={handleAddTemplate} />
+        ) : (
+          <Text>You have reached the maximum number of templates.</Text>
+        )}
       </Inline>
     </Stack>
   );
