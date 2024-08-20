@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import ForgeReconciler, {
-  Box, 
-  Heading, 
-  DynamicTable, 
-  Button, 
-  Toggle, 
-  Label, 
-  Textfield, 
-  Inline, 
+  Box,
+  Heading,
+  DynamicTable,
+  Button,
+  Toggle,
+  Label,
+  Textfield,
+  Inline,
   Stack
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
@@ -59,7 +59,7 @@ const App = () => {
   };
 
   const formatRows = (list) => {
-    if (!list.items){
+    if (!list.items) {
       return
     }
     const rows = list.items.map((item, index) => ({
@@ -132,13 +132,11 @@ const App = () => {
 
       newTemplateLists[listIndex] = { ...newTemplateLists[listIndex], items: newItems };
 
-      // Persist the updated list to the backend
       invoke('updateTemplateList', { templateList: newTemplateLists[listIndex] });
 
       return newTemplateLists;
     });
 
-    // Clear the editing state
     setEditingItem({ listId: null, itemIndex: null });
   };
 
@@ -168,14 +166,14 @@ const App = () => {
     if (!template.name || !template.items || !Array.isArray(template.items)) {
       return { success: false };
     }
-  
+
     invoke('createTemplateList', template).then((newTemplate) => {
       setTemplateLists(prevTemplateLists => [...prevTemplateLists, newTemplate]);
     }).catch(error => {
       console.error('Error creating template:', error);
     });
   };
-  
+
 
   const handleDeleteItem = (list, index) => {
     setTemplateLists(prevTemplateLists => {
@@ -216,9 +214,35 @@ const App = () => {
   };
 
   const handleEnabledToggle = async (list) => {
-    console.log(list);
-    // Implement toggle functionality as needed
+    setTemplateLists(prevTemplateLists =>
+      prevTemplateLists.map(l =>
+        l.id === list.id
+          ? { ...l, isEnabled: !l.isEnabled }
+          : l
+      )
+    );
+
+    try {
+      list.isEnabled = !list.isEnabled
+      const res = await invoke('updateTemplateList', {
+        templateList: list
+      });
+
+      if (!res.success) {
+        throw new Error('Updating the enabled state was not successful');
+      }
+    } catch (error) {
+      console.error('Error updating enabled state:', error);
+      setTemplateLists(prevTemplateLists =>
+        prevTemplateLists.map(l =>
+          l.id === list.id
+            ? { ...l, isEnabled: list.isEnabled }
+            : l
+        )
+      );
+    }
   };
+
 
   const handleDeleteTemplate = async (id) => {
     const res = await invoke('deleteTemplateList', { id: id });
@@ -261,7 +285,7 @@ const App = () => {
             <Inline spread='space-between'>
               <Inline alignBlock='center'>
                 <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
-                {list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
+                {!list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
               </Inline>
               <Inline alignBlock='center'>
                 <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
@@ -295,7 +319,7 @@ const App = () => {
         ))}
       </Box>
       <Inline alignInline='center'>
-      <CreateNewTemplateModal handleAddTemplate={handleAddTemplate}/>
+        <CreateNewTemplateModal handleAddTemplate={handleAddTemplate} />
       </Inline>
     </Stack>
   );

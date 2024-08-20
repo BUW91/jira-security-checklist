@@ -44,12 +44,14 @@ resolver.define('createTemplateList', async (req) => {
 
 resolver.define('updateTemplateList', async (req) => {
   const { templateList } = req.payload
-  await storage.set(getTemplateRef(templateList.id), templateList)
+  const res = await storage.set(getTemplateRef(templateList.id), templateList)
+  return {success: true, message: res}
 })
 
 resolver.define('setDefaultTemplateList', async (req) => {
   const { newDefaultId } = req.payload
-  const templates = await storage.query().where('key', startsWith('list-')).getMany()
+  const res = await storage.query().where('key', startsWith('list-')).getMany()
+  const templates = res.results
   await Promise.all(templates.map(async (template) => {
     const templateData = template.value;
 
@@ -61,6 +63,7 @@ resolver.define('setDefaultTemplateList', async (req) => {
 
     await storage.set(getTemplateRef(templateData.id), templateData);
   }));
+  return {success: true}
 })
 
 resolver.define('deleteTemplateList', async (req) => {
