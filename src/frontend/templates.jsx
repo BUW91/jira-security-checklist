@@ -282,7 +282,7 @@ const App = () => {
     <Stack>
       <Box>
         {templateLists.map((list, index) => (
-          <Box key={index} xcss={{borderBottomStyle:'solid', borderBottomWidth:'border.width', marginBottom: 'space.400'}}>
+          <Box key={index} xcss={{ borderBottomStyle: 'solid', borderBottomWidth: 'border.width', marginBottom: 'space.400' }}>
             <Inline spread='space-between'>
               <Inline alignBlock='center'>
                 <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
@@ -308,14 +308,14 @@ const App = () => {
               alignBlock='center'
               alignInline='center'
             >
-              <Box key={index} xcss={{marginBottom: 'space.300'}}>
-              <Button
-                appearance='subtle'
-                iconBefore="add"
-                onClick={() => {
-                  handleAddItem(list.id);
-                }}
-              >Add new item</Button>
+              <Box key={index} xcss={{ marginBottom: 'space.300' }}>
+                <Button
+                  appearance='subtle'
+                  iconBefore="add"
+                  onClick={() => {
+                    handleAddItem(list.id);
+                  }}
+                >Add new item</Button>
               </Box>
             </Inline>
           </Box>

@@ -9,6 +9,7 @@ const App = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState();
 
 
   useEffect(() => {
@@ -25,13 +26,14 @@ const App = () => {
         const defaultList = availableLists.find(l => l.default === true);
         const toSetSelected = defaultList
           ? defaultList
-          : availableLists.find(list => list.name === 'OWASP') || {};
+          : availableLists.find(list => list.isDefault) || {};
         if (toSetSelected.items && !toSetSelected.items[0].id) {
           toSetSelected.items = toSetSelected.items.map(item => ({
             ...item,
           }));
         }
         setlistInUse(toSetSelected.items);
+        setSelectedTemplate({label: toSetSelected.name, value: toSetSelected.id})
       }
     };
 
@@ -46,16 +48,17 @@ const App = () => {
   }, [listInUse]);
 
   function selectTemplateAction(e) {
-    const selectedTemplate = e.key;
+    const selectedKey = e.value;
 
-    const selectedList = lists.find(list => list.name === selectedTemplate);
+    const selectedList = lists.find(list => list.id === selectedKey);
     if (selectedList) {
       setlistInUse(selectedList.items);
+      setSelectedTemplate({label: selectedList.name, value: selectedList.id})
     }
   }
 
   async function handleActionSelect(index, selectedOption) {
-    const action = selectedOption.key;
+    const action = selectedOption.value;
     const updatedList = [...listInUse];
     updatedList[index].action = action;
     setlistInUse(updatedList);
@@ -129,9 +132,9 @@ const App = () => {
 
 
   const actionOptions = [
-    { label: 'Checked', key: 'checked' },
-    { label: 'Needs review', key: 'needs-review' },
-    { label: 'N/A', key: 'not-applicable' }
+    { label: 'Checked', value: 'checked' },
+    { label: 'Needs review', value: 'needs-review' },
+    { label: 'N/A', value: 'not-applicable' }
   ];
 
   const handleEdit = (itemIndex, currentValue) => {
@@ -178,7 +181,7 @@ const App = () => {
             name="Select action"
             appearance="subtle"
             options={actionOptions}
-            value={actionOptions.find(option => option.key === item.action)}
+            value={actionOptions.find(option => option.value === item.action)}
             onChange={(selectedOption) => handleActionSelect(index, selectedOption)}
           />
         ),
@@ -230,11 +233,12 @@ const App = () => {
           <Label labelFor="select-template-list">Select template:</Label>
           <Select
             id="select-template-list"
+            value={selectedTemplate}
             name="Select template list"
             appearance="subtle"
             options={(lists.map(list => ({
               label: list.name,
-              key: list.name,
+              value: list.id,
             })) || [])}
             onChange={selectTemplateAction}
           />
