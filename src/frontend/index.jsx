@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton, Textfield } from '@forge/react';
-import { invoke } from '@forge/bridge';
+import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton, Textfield, SectionMessage } from '@forge/react';
+import { invoke, view } from '@forge/bridge';
 
 const App = () => {
   const context = useProductContext();
@@ -10,11 +10,14 @@ const App = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState();
+  const [showLicenseError, setShowLicenseError] = useState(false);
 
 
   useEffect(() => {
     if (!context || !context.extension) return;
-
+    if (!context.license.active){
+      setShowLicenseError(true)
+    }
     const fetchData = async () => {
       const availableLists = await invoke('getTemplateLists');
       setLists(availableLists);
@@ -33,7 +36,7 @@ const App = () => {
           }));
         }
         setlistInUse(toSetSelected.items);
-        setSelectedTemplate({label: toSetSelected.name, value: toSetSelected.id})
+        setSelectedTemplate({ label: toSetSelected.name, value: toSetSelected.id })
       }
     };
 
@@ -53,7 +56,7 @@ const App = () => {
     const selectedList = lists.find(list => list.id === selectedKey);
     if (selectedList) {
       setlistInUse(selectedList.items);
-      setSelectedTemplate({label: selectedList.name, value: selectedList.id})
+      setSelectedTemplate({ label: selectedList.name, value: selectedList.id })
     }
   }
 
@@ -93,17 +96,17 @@ const App = () => {
     let newList;
     setlistInUse(prevListInUse => {
       const newItem = { label: 'New Item' };
-  
+
       newList = [...prevListInUse, newItem];
       invoke('updateList', { issueId: context.extension.issue.id, list: newList });
-  
+
       return newList;
     });
-  
+
     const newIndex = newList.length - 1; // New item is at the last index
     handleEdit(newIndex, '');
   };
-  
+
 
   const handleSaveItemEdit = (itemIndex, newValue) => {
     setlistInUse(prevListInUse => {
@@ -112,23 +115,23 @@ const App = () => {
         ...newList[itemIndex],
         label: newValue,
       };
-  
+
       // Persist the updated list to the backend
       invoke('updateList', { issueId: context.extension.issue.id, list: newList });
-  
+
       return newList;
     });
-  
+
     // Clear the editing state
     setEditingItem(null);
   };
-  
+
   const handleCancelEdit = () => {
     setEditingItem(null);
     setEditValue('');
   };
-  
-  
+
+
 
 
   const actionOptions = [
@@ -143,7 +146,7 @@ const App = () => {
   };
 
   const tableRows = context && listInUse ? listInUse.map((item, index) => ({
-    key: 'item-row'+index,
+    key: 'item-row' + index,
     cells: [
       {
         content: editingItem === index ? (
@@ -228,46 +231,52 @@ const App = () => {
 
   return (
     <>
-      <Inline spread='space-between'>
-        <Inline alignBlock='center'>
-          <Label labelFor="select-template-list">Select template:</Label>
-          <Select
-            id="select-template-list"
-            value={selectedTemplate}
-            name="Select template list"
-            appearance="subtle"
-            options={(lists.map(list => ({
-              label: list.name,
-              value: list.id,
-            })) || [])}
-            onChange={selectTemplateAction}
-          />
-        </Inline>
-        <Inline alignBlock='center'>
-          <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate List (AI)</LoadingButton>
-        </Inline>
-      </Inline>
+      {showLicenseError ?
+        <SectionMessage appearance='error'>Your Jira installation does not have an active license for this app. Please contact your admin to get an active license.</SectionMessage>
+        :
+        <>
+          <Inline spread='space-between'>
+            <Inline alignBlock='center'>
+              <Label labelFor="select-template-list">Select template:</Label>
+              <Select
+                id="select-template-list"
+                value={selectedTemplate}
+                name="Select template list"
+                appearance="subtle"
+                options={(lists.map(list => ({
+                  label: list.name,
+                  value: list.id,
+                })) || [])}
+                onChange={selectTemplateAction}
+              />
+            </Inline>
+            <Inline alignBlock='center'>
+              <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate List (AI)</LoadingButton>
+            </Inline>
+          </Inline>
 
-      <DynamicTable
-        head={tableColumns}
-        rows={tableRows}
-        rowsPerPage={20}
-        emptyView="Select a template or generate items"
-        isRankable
-        onRankEnd={handleRankEnd}
-      />
-      <Inline
-        alignBlock='center'
-        alignInline='center'
-      >
-        <Button
-          appearance='subtle'
-          iconBefore="add"
-          onClick={() => {
-            handleAddItem();
-          }}
-        >Add new item</Button>
-      </Inline>
+          <DynamicTable
+            head={tableColumns}
+            rows={tableRows}
+            rowsPerPage={20}
+            emptyView="Select a template or generate items"
+            isRankable
+            onRankEnd={handleRankEnd}
+          />
+          <Inline
+            alignBlock='center'
+            alignInline='center'
+          >
+            <Button
+              appearance='subtle'
+              iconBefore="add"
+              onClick={() => {
+                handleAddItem();
+              }}
+            >Add new item</Button>
+          </Inline>
+        </>
+      }
     </>
   );
 };

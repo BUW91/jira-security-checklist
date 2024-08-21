@@ -9,17 +9,28 @@ import ForgeReconciler, {
   Textfield,
   Inline,
   Stack,
-  Text
+  Text,
+  useProductContext,
+  SectionMessage
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 import { CreateNewTemplateModal } from './components/CreateNewTemplate';
 
 
 const App = () => {
+  const context = useProductContext();
   const [templateLists, setTemplateLists] = useState([]);
   const [editingItem, setEditingItem] = useState({ listId: null, itemIndex: null });
   const [editValue, setEditValue] = useState('');
   const [newItemListId, setNewItemListId] = useState(null);
+  const [showLicenseError, setShowLicenseError] = useState(false);
+
+  useEffect(() => {
+    if (!context || !context.extension) return;
+    if (!context.license.active){
+      setShowLicenseError(true)
+    }
+  }, [context]);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -279,56 +290,62 @@ const App = () => {
   };
 
   return (
-    <Stack>
-      <Box>
-        {templateLists.map((list, index) => (
-          <Box key={index} xcss={{ borderBottomStyle: 'solid', borderBottomWidth: 'border.width', marginBottom: 'space.400' }}>
-            <Inline spread='space-between'>
-              <Inline alignBlock='center'>
-                <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
-                {!list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
-              </Inline>
-              <Inline alignBlock='center'>
-                <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
-                <Toggle
-                  id={`list-toggle-enabled-${index}`}
-                  isChecked={list.isEnabled ? true : false}
-                  onChange={() => handleEnabledToggle(list)}
-                />
-                <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
-              </Inline>
-            </Inline>
-            <DynamicTable
-              head={columns}
-              rows={formatRows(list)}
-              isRankable
-              onRankEnd={({ sourceIndex, destination }) => handleRankEnd(sourceIndex, destination.index, list.id)}
-            ></DynamicTable>
-            <Inline
-              alignBlock='center'
-              alignInline='center'
-            >
-              <Box key={index} xcss={{ marginBottom: 'space.300' }}>
-                <Button
-                  appearance='subtle'
-                  iconBefore="add"
-                  onClick={() => {
-                    handleAddItem(list.id);
-                  }}
-                >Add new item</Button>
+    <>
+      {showLicenseError ?
+        <SectionMessage appearance='error'>Your Jira installation does not have an active license for this app. Please contact your admin to get an active license.</SectionMessage>
+        :
+        <Stack>
+          <Box>
+            {templateLists.map((list, index) => (
+              <Box key={index} xcss={{ borderBottomStyle: 'solid', borderBottomWidth: 'border.width', marginBottom: 'space.400' }}>
+                <Inline spread='space-between'>
+                  <Inline alignBlock='center'>
+                    <Heading as="h3">{list.name}{list.isDefault ? '(Default)' : ''}</Heading>
+                    {!list.isDefault ? <Button appearance='subtle' onClick={() => handleSetDefault(list.id)}>Set Default</Button> : ''}
+                  </Inline>
+                  <Inline alignBlock='center'>
+                    <Label labelFor={`list-toggle-enabled-${index}`}>Enabled</Label>
+                    <Toggle
+                      id={`list-toggle-enabled-${index}`}
+                      isChecked={list.isEnabled ? true : false}
+                      onChange={() => handleEnabledToggle(list)}
+                    />
+                    <Button appearance='danger' onClick={() => handleDeleteTemplate(list.id)}>Delete</Button>
+                  </Inline>
+                </Inline>
+                <DynamicTable
+                  head={columns}
+                  rows={formatRows(list)}
+                  isRankable
+                  onRankEnd={({ sourceIndex, destination }) => handleRankEnd(sourceIndex, destination.index, list.id)}
+                ></DynamicTable>
+                <Inline
+                  alignBlock='center'
+                  alignInline='center'
+                >
+                  <Box key={index} xcss={{ marginBottom: 'space.300' }}>
+                    <Button
+                      appearance='subtle'
+                      iconBefore="add"
+                      onClick={() => {
+                        handleAddItem(list.id);
+                      }}
+                    >Add new item</Button>
+                  </Box>
+                </Inline>
               </Box>
-            </Inline>
+            ))}
           </Box>
-        ))}
-      </Box>
-      <Inline alignInline='center'>
-        {templateLists.length < 15 ? (
-          <CreateNewTemplateModal handleAddTemplate={handleAddTemplate} />
-        ) : (
-          <Text>You have reached the maximum number of templates.</Text>
-        )}
-      </Inline>
-    </Stack>
+          <Inline alignInline='center'>
+            {templateLists.length < 15 ? (
+              <CreateNewTemplateModal handleAddTemplate={handleAddTemplate} />
+            ) : (
+              <Text>You have reached the maximum number of templates.</Text>
+            )}
+          </Inline>
+        </Stack>
+      }
+    </>
   );
 };
 
