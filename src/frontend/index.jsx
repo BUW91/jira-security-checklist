@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton, Textfield, SectionMessage } from '@forge/react';
 import { invoke, view } from '@forge/bridge';
+
 
 const App = () => {
   const context = useProductContext();
@@ -8,9 +9,10 @@ const App = () => {
   const [listInUse, setlistInUse] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [editValue, setEditValue] = useState('');
+  const [startingEditValue, setStartingEditValue] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState();
   const [showLicenseError, setShowLicenseError] = useState(false);
+  const editVal = useRef('')
 
 
   useEffect(() => {
@@ -122,17 +124,16 @@ const App = () => {
       return newList;
     });
 
-    // Clear the editing state
     setEditingItem(null);
+    setStartingEditValue('')
+    editVal.current = ''
   };
 
   const handleCancelEdit = () => {
     setEditingItem(null);
-    setEditValue('');
+    setStartingEditValue('');
+    editVal.current = ''
   };
-
-
-
 
   const actionOptions = [
     { label: 'Checked', value: 'checked' },
@@ -142,31 +143,33 @@ const App = () => {
 
   const handleEdit = (itemIndex, currentValue) => {
     setEditingItem(itemIndex);
-    setEditValue(currentValue)
+    setStartingEditValue(currentValue)
+    editVal.current = currentValue
   };
 
   const tableRows = context && listInUse ? listInUse.map((item, index) => ({
-    key: 'item-row' + index,
+    key: 'item-row'+item.id,
     cells: [
       {
         content: editingItem === index ? (
           <Box key='edit-box'>
             <Textfield
-              autoFocus
-              key='item-edit'
-              id='item-edit'
-              defaultValue={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              key={`item-edit-${item.id}`}
+              id={`item-edit-${item.id}`}
+              defaultValue={startingEditValue}
+              onChange={(e) => editVal.current = e.target.value}
             />
             <Button
-              key='save-edit'
+              key={`save-edit-${item.id}`}
+              id={`save-edit-${item.id}`}
               appearance="primary"
-              onClick={() => handleSaveItemEdit(index, editValue)}
+              onClick={() => handleSaveItemEdit(index, editVal.current)}
             >
               Save
             </Button>
             <Button
-              key='cancel-edit'
+              key={`cancel-edit-${item.id}`}
+              id={`cancel-edit-${item.id}`}
               appearance="subtle"
               onClick={handleCancelEdit}
             >
@@ -174,7 +177,7 @@ const App = () => {
             </Button>
           </Box>
         ) : (
-          item.label
+          <Box><Text>{item.label}</Text></Box>
         )
       },
       {
