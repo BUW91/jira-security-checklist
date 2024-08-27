@@ -48,6 +48,37 @@ resolver.define('updateTemplateList', async (req) => {
   return {success: true, message: res}
 })
 
+resolver.define('deleteListItem', async (req) => {
+  try{
+    const { issueId, listItem} = req.payload
+    let list = await storage.get(issueId)
+    const listWithoutItem = list.filter(item => item.id !== listItem.id)
+    await storage.set(issueId, listWithoutItem)
+    return {success: true, list: listWithoutItem}
+  }
+  catch(e){
+    return {success: false, message: e}
+  }
+})
+
+resolver.define('rankListItem', async (req) => {
+  try{
+    let { issueId, listItem, newRank} = req.payload
+    let list = await storage.get(issueId)
+    const idx = list.findIndex(item => item.id === listItem.id)
+
+    const updatedList = [...list];
+    const [movedItem] = updatedList.splice(idx, 1);
+    updatedList.splice(newRank, 0, movedItem);
+    await storage.set(issueId, updatedList)
+    return {success: true, list: updatedList}
+  }
+  catch(e){
+    console.log(e)
+    return {success: false, message: e.message}
+  }
+})
+
 resolver.define('setDefaultTemplateList', async (req) => {
   const { newDefaultId } = req.payload
   const res = await storage.query().where('key', startsWith('list-')).getMany()
@@ -96,8 +127,50 @@ resolver.define('updateList', async (req) => {
   return { success: true };
 });
 
+resolver.define('addItemToList', async (req) => {
+  const { issueId, newItem } = req.payload
+  if (!newItem.id){
+    newItem.id = uuid()
+  }
+
+  try {
+    let list = await storage.get(issueId)
+    if (!list){
+      list = []
+    }
+    list.push(newItem)
+    const res = await storage.set(issueId, list)
+    return { success: true, list: list }
+  }
+  catch (e) {
+    return { success: false, message: e }
+  }
+});
+
+resolver.define('updateListItem', async (req) => {
+  try{
+    let { issueId, listItem} = req.payload
+    listItem.id ? listItem.id : uuid()
+    let list = await storage.get(issueId)
+    const idx = list.findIndex(item => item.id === listItem.id)
+    if (idx || idx === 0){
+      list[idx] = listItem
+    }
+    else{
+      console.log('Nope not there, pushing')
+      list.push(listItem)
+    }
+    await storage.set(issueId, list)
+    return {success: true, list: list}
+  }
+  catch(e){
+    console.log(e)
+    return {success: false, message: e}
+  }
+})
+
 resolver.define('getGeneratedList', async (req) => {
-  const { issueKey } = req.payload
+  const { issueId, issueKey } = req.payload
   const res = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`)
   const issueData = await res.json();
   const summary = issueData.fields.summary
@@ -115,7 +188,9 @@ resolver.define('getGeneratedList', async (req) => {
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data)) {
-        return data
+        const list = data.map(item => ({...item, status: 'needs-review', id: uuid()}))
+        storage.set(issueId, list)
+        return list
       } else {
         return { success: false, body: data }
       }
@@ -124,7 +199,8 @@ resolver.define('getGeneratedList', async (req) => {
     }
   }
   catch (e) {
-    return { success: false, error: e }
+    console.error(e)
+    return { success: false, error: e.message }
   }
 })
 

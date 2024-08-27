@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton, Textfield, SectionMessage } from '@forge/react';
+import ForgeReconciler, { Text, Select, Label, DynamicTable, Button, Inline, Strong, Box, Icon, useProductContext, LoadingButton, Textfield, SectionMessage, ProgressBar, Badge, Lozenge } from '@forge/react';
 import { invoke, view } from '@forge/bridge';
+import uuid from 'uuid-random';
 
 
 const App = () => {
@@ -14,10 +15,14 @@ const App = () => {
   const [showLicenseError, setShowLicenseError] = useState(false);
   const editVal = useRef('')
 
+  const completedItemsCount = listInUse.filter(item => item.status === 'reviewed').length;
+  const totalItemsCount = listInUse.length;
+  const progressValue = totalItemsCount > 0 ? completedItemsCount / totalItemsCount : 0;
+  const progressAppearance = progressValue === 1 ? 'success' : 'default'
 
   useEffect(() => {
     if (!context || !context.extension) return;
-    if (!context.license.active){
+    if (!context.license.active) {
       setShowLicenseError(true)
     }
     const fetchData = async () => {
@@ -29,12 +34,13 @@ const App = () => {
         setlistInUse(activeList);
       } else {
         const defaultList = availableLists.find(l => l.default === true);
-        const toSetSelected = defaultList
+        let toSetSelected = defaultList
           ? defaultList
           : availableLists.find(list => list.isDefault) || {};
         if (toSetSelected.items && !toSetSelected.items[0].id) {
           toSetSelected.items = toSetSelected.items.map(item => ({
             ...item,
+            id: uuid()
           }));
         }
         setlistInUse(toSetSelected.items);
@@ -45,33 +51,49 @@ const App = () => {
     fetchData();
   }, [context]);
 
-  useEffect(() => {
-    if (!context) {
-      return
-    }
-    invoke('updateList', { issueId: context.extension.issue.id, list: listInUse });
-  }, [listInUse]);
+  // useEffect(() => {
+  //   if (!context) {
+  //     return
+  //   }
+  //   invoke('updateList', { issueId: context.extension.issue.id, list: listInUse });
+  // }, [listInUse]);
 
   function selectTemplateAction(e) {
     const selectedKey = e.value;
-
     const selectedList = lists.find(list => list.id === selectedKey);
+    let newList 
     if (selectedList) {
-      setlistInUse(selectedList.items);
-      setSelectedTemplate({ label: selectedList.name, value: selectedList.id })
+      newList = selectedList.items.map(item => ({
+        ...item,
+        status: 'needs-review',
+        id: uuid()
+      }));
+      invoke('updateList', { issueId: context.extension.issue.id, list: newList });
+      setlistInUse(newList);
+      setSelectedTemplate({ label: selectedList.name, value: selectedList.id });
     }
   }
+  
 
-  async function handleActionSelect(index, selectedOption) {
-    const action = selectedOption.value;
+  async function handleStatusSelect(id, selectedOption) {
+    const status = selectedOption.value;
     const updatedList = [...listInUse];
-    updatedList[index].action = action;
+
+    const idx = listInUse.findIndex(item => item.id === id)
+    const newListItem = {
+      ...updatedList[idx],
+      status: status
+    }
+    updatedList[idx] = newListItem;
     setlistInUse(updatedList);
+    invoke('updateListItem', { issueId: context.extension.issue.id, listItem: newListItem })
   }
 
-  async function handleDelete(index) {
-    const updatedList = listInUse.filter((_, i) => i !== index);
+  async function handleDelete(id) {
+    const listItem = listInUse.find(item => item.id === id)
+    const updatedList = listInUse.filter((item) => item.id !== id);
     setlistInUse(updatedList);
+    invoke('deleteListItem', { issueId: context.extension.issue.id, listItem: listItem })
   }
 
   async function handleRankEnd({ sourceIndex, destination }) {
@@ -79,51 +101,48 @@ const App = () => {
       const updatedList = [...listInUse];
       const [movedItem] = updatedList.splice(sourceIndex, 1);
       updatedList.splice(destination.index, 0, movedItem);
+      invoke('rankListItem', { issueId: context.extension.issue.id, listItem: movedItem, newRank: destination.index })
       setlistInUse(updatedList);
     }
   }
 
   async function handleGenerateClick(e) {
     setAiLoading(true)
-    const generatedList = await invoke('getGeneratedList', { issueKey: context.extension.issue.key })
+    const generatedList = await invoke('getGeneratedList', { issueId: context.extension.issue.id, issueKey: context.extension.issue.key })
     setAiLoading(false)
     if (!Array.isArray(generatedList)) {
       console.error('The generated list was not an array', generatedList)
       return
     }
     setlistInUse(generatedList)
+    setSelectedTemplate(null)
   }
 
   const handleAddItem = () => {
+    const newItem = { label: 'New Item', id: uuid(), status: 'needs-review' };
     let newList;
     setlistInUse(prevListInUse => {
-      const newItem = { label: 'New Item' };
-
       newList = [...prevListInUse, newItem];
-      invoke('updateList', { issueId: context.extension.issue.id, list: newList });
-
       return newList;
     });
+    invoke('updateList', { issueId: context.extension.issue.id, list: newList });
 
-    const newIndex = newList.length - 1; // New item is at the last index
-    handleEdit(newIndex, '');
+    handleEdit(newItem.id, '');
   };
 
 
-  const handleSaveItemEdit = (itemIndex, newValue) => {
+  const handleSaveItemEdit = async (id, newValue) => {
+    const idx = listInUse.findIndex(item => item.id === id)
+    const newListItem = {
+      ...listInUse[idx],
+      label: newValue,
+    }
     setlistInUse(prevListInUse => {
       const newList = [...prevListInUse];
-      newList[itemIndex] = {
-        ...newList[itemIndex],
-        label: newValue,
-      };
-
-      // Persist the updated list to the backend
-      invoke('updateList', { issueId: context.extension.issue.id, list: newList });
-
+      newList[idx] = newListItem;
       return newList;
     });
-
+    invoke('updateListItem', { issueId: context.extension.issue.id, listItem: newListItem })
     setEditingItem(null);
     setStartingEditValue('')
     editVal.current = ''
@@ -135,11 +154,18 @@ const App = () => {
     editVal.current = ''
   };
 
-  const actionOptions = [
-    { label: 'Checked', value: 'checked' },
+  const statusOptions = [
     { label: 'Needs review', value: 'needs-review' },
-    { label: 'N/A', value: 'not-applicable' }
+    { label: 'Reviewed', value: 'reviewed' },
+    { label: 'Action required', value: 'action-required' }
   ];
+
+  const statusLozenge = {
+    'needs-review': { appearance: "default", label: "NEEDS REVIEW" },
+    'action-required': { appearance: "moved", label: "ACTION REQUIRED" },
+    reviewed: {appearance: "success", label: "REVIEWED"},
+  };
+
 
   const handleEdit = (itemIndex, currentValue) => {
     setEditingItem(itemIndex);
@@ -147,11 +173,11 @@ const App = () => {
     editVal.current = currentValue
   };
 
-  const tableRows = context && listInUse ? listInUse.map((item, index) => ({
-    key: 'item-row'+item.id,
+  const tableRows = context && listInUse ? listInUse.map((item) => ({
+    key: 'item-row' + item.id,
     cells: [
       {
-        content: editingItem === index ? (
+        content: editingItem === item.id ? (
           <Box key='edit-box'>
             <Textfield
               key={`item-edit-${item.id}`}
@@ -163,7 +189,7 @@ const App = () => {
               key={`save-edit-${item.id}`}
               id={`save-edit-${item.id}`}
               appearance="primary"
-              onClick={() => handleSaveItemEdit(index, editVal.current)}
+              onClick={() => handleSaveItemEdit(item.id, editVal.current)}
             >
               Save
             </Button>
@@ -177,18 +203,27 @@ const App = () => {
             </Button>
           </Box>
         ) : (
-          <Box><Text>{item.label}</Text></Box>
+          <Inline alignBlock='center' space='space.050'>
+            {item.status ? (
+              <Lozenge appearance={statusLozenge[item.status]?.appearance}>
+                {statusLozenge[item.status]?.label}
+              </Lozenge>
+            ) : null}
+            <Box>
+            <Text>{item.label}</Text>
+            </Box>
+          </Inline>
         )
       },
       {
         content: (
           <Select
-            id={`action-select-${index}`}
-            name="Select action"
+            id={`status-select-${item.id}`}
+            name="Select status"
             appearance="subtle"
-            options={actionOptions}
-            value={actionOptions.find(option => option.value === item.action)}
-            onChange={(selectedOption) => handleActionSelect(index, selectedOption)}
+            options={statusOptions}
+            value={statusOptions.find(option => option.value === item.status) || statusOptions[0]}
+            onChange={(selectedOption) => handleStatusSelect(item.id, selectedOption)}
           />
         ),
       },
@@ -198,12 +233,12 @@ const App = () => {
             <Button
               appearance='subtle'
               iconBefore="edit"
-              onClick={() => handleEdit(index, item.label)}
+              onClick={() => handleEdit(item.id, item.label)}
             />
             <Button
               appearance='subtle'
               iconBefore="cross-circle"
-              onClick={() => handleDelete(index)}
+              onClick={() => handleDelete(item.id)}
             />
           </Inline>
         ),
@@ -219,8 +254,8 @@ const App = () => {
         isSortable: true,
       },
       {
-        key: 'action',
-        content: 'action',
+        key: 'update-status',
+        content: 'Update status',
         isSortable: true,
         width: 15
       },
@@ -239,23 +274,27 @@ const App = () => {
         :
         <>
           <Inline spread='space-between'>
+              <Inline alignBlock='center'>
+                <Label labelFor="select-template-list">Select template:</Label>
+                <Select
+                  id="select-template-list"
+                  value={selectedTemplate}
+                  name="Select template list"
+                  appearance="subtle"
+                  options={(lists.map(list => ({
+                    label: list.name,
+                    value: list.id,
+                  })) || [])}
+                  onChange={selectTemplateAction}
+                />
+              </Inline>
             <Inline alignBlock='center'>
-              <Label labelFor="select-template-list">Select template:</Label>
-              <Select
-                id="select-template-list"
-                value={selectedTemplate}
-                name="Select template list"
-                appearance="subtle"
-                options={(lists.map(list => ({
-                  label: list.name,
-                  value: list.id,
-                })) || [])}
-                onChange={selectTemplateAction}
-              />
+              <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate Custom List</LoadingButton>
             </Inline>
-            <Inline alignBlock='center'>
-              <LoadingButton appearance="primary" onClick={handleGenerateClick} isLoading={aiLoading}>Generate List (AI)</LoadingButton>
-            </Inline>
+          </Inline>
+          <Inline spread='space-between' space='space.200' alignBlock='center'>
+          <ProgressBar value={progressValue} appearance={progressAppearance} />
+          <Badge appearance='primary' max={false}>{completedItemsCount + '/' + totalItemsCount}</Badge>
           </Inline>
 
           <DynamicTable

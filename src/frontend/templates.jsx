@@ -49,7 +49,7 @@ const App = () => {
     if (newItemListId) {
       const list = templateLists.find(list => list.id === newItemListId);
       if (list) {
-        const newIndex = list.items.length - 1; // New item is at the last index
+        const newIndex = list.items.length - 1;
         handleEditItem(newItemListId, newIndex, '');
       }
       setNewItemListId(null); // Reset after handling
