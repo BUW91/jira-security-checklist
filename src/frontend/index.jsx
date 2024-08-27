@@ -40,9 +40,11 @@ const App = () => {
         if (toSetSelected.items && !toSetSelected.items[0].id) {
           toSetSelected.items = toSetSelected.items.map(item => ({
             ...item,
+            status: 'needs-review',
             id: uuid()
           }));
         }
+        invoke('updateList', { issueId: context.extension.issue.id, list: toSetSelected.items });
         setlistInUse(toSetSelected.items);
         setSelectedTemplate({ label: toSetSelected.name, value: toSetSelected.id })
       }
