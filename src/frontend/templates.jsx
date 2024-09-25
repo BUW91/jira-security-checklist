@@ -27,9 +27,9 @@ const App = () => {
 
   useEffect(() => {
     if (!context || !context.extension) return;
-    // if (!context.license.active){
-    //   setShowLicenseError(true)
-    // }
+    if (!context.license.active){
+      setShowLicenseError(true)
+    }
   }, [context]);
 
   useEffect(() => {
