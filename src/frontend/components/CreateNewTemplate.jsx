@@ -17,15 +17,22 @@ import {
   DynamicTable,
   Inline,
   ErrorMessage,
-  RequiredAsterisk
+  RequiredAsterisk,
+  Select, // Import Select component
 } from '@forge/react';
 
+import owasp2021 from '../../default-lists/owasp2021'
+import owaspApi2023 from '../../default-lists/owaspApi2023';
+
+
 export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
+  const presetTemplates = [owasp2021, owaspApi2023]
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState([]); // State to hold the list of items
   const [newItemLabel, setNewItemLabel] = useState(''); // State to hold the value of the current item being added
   const [formError, setFormError] = useState(''); // State to hold form error messages
-  
+  const [templateName, setTemplateName] = useState('');
+
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
@@ -37,7 +44,7 @@ export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
   const { handleSubmit, getFieldId, register } = useForm();
 
   const onSubmit = handleSubmit(data => {
-    if (!data['template-name'].trim()) {
+    if (!templateName.trim()) {
       setFormError('Template name is required.');
       return;
     }
@@ -48,7 +55,7 @@ export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
     }
 
     handleAddTemplate({
-      name: data['template-name'],
+      name: templateName,
       items: items // Pass the list of items
     });
     closeModal(); // Close the modal after submitting
@@ -92,7 +99,6 @@ export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
     setItems(updatedItems); // Update the state with the reordered items
   };
   
-
   const formatRows = (items) => {
     if (!items){
       return
@@ -121,6 +127,19 @@ export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
     return rows;
   };
 
+  const handlePresetChange = (event) => {
+    if (event) {
+      setTemplateName(event.label)
+      const presetTemplate = presetTemplates.find(template => template.name === event.label);
+      if (presetTemplate) {
+        setItems(presetTemplate.items);
+      }
+    } else {
+      setTemplateName('')
+      setItems([]);
+    }
+  };
+
   return (
     <>
       <Button
@@ -139,16 +158,34 @@ export const CreateNewTemplateModal = ({ handleAddTemplate }) => {
                 <ModalTitle>Create a new template</ModalTitle>
               </ModalHeader>
               <ModalBody>
-                <Label labelFor={getFieldId('template-name')}>
+                <Label labelFor="preset-template">
+                  Or choose from a prebuild template
+                </Label>
+                <Select
+                  inputId="preset-template"
+                  onChange={handlePresetChange}
+                  options={presetTemplates.map(template => ({
+                    label: template.name,
+                    value: template.name
+                  }))}
+                  placeholder="Select a preset template"
+                  isClearable={true}
+                />
+
+                <Label labelFor="template-name">
                   Template name <RequiredAsterisk/>
                 </Label>
                 <Textfield 
-                  {...register('template-name', { required: true })} 
+                  inputId="template-name"
                   aria-required="true"
+                  value={templateName}
+                  onChange={(e) => {
+                    setTemplateName(e.target.value)
+                  }}
                 />
 
                 <Label>
-                  Add Items<RequiredAsterisk/>
+                  Add Items
                 </Label>
                 <Box>
                   <Textfield

@@ -6,7 +6,7 @@ modules:
         function: resolver
       render: native
       title: Security Checklist
-      icon: https://solidini.com/jira/security-checklist/img/icon.png
+      icon: https://solidini.com/jira/security-checklist/img/sc-small-fit.png
   jira:globalPage:
     - key: checklist-templates
       resource: templates
@@ -14,6 +14,7 @@ modules:
         function: resolver
       render: native
       title: Security Checklist Templates
+      icon: https://solidini.com/jira/security-checklist/img/sc-small-fit.png
   function:
     - key: resolver
       handler: index.handler
